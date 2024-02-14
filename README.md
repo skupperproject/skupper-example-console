@@ -1,6 +1,6 @@
 # Skupper Hello World using the console
 
-[![main](https://github.com/ssorj/skupper-example-console/actions/workflows/main.yaml/badge.svg)](https://github.com/ssorj/skupper-example-console/actions/workflows/main.yaml)
+[![main](https://github.com/skupperproject/skupper-example-console/actions/workflows/main.yaml/badge.svg)](https://github.com/skupperproject/skupper-example-console/actions/workflows/main.yaml)
 
 #### Explore an application network using the Skupper web console
 
