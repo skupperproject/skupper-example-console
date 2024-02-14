@@ -1,8 +1,8 @@
-# Skupper Hello World
+# Skupper Hello World using the console
 
 [![main](https://github.com/ssorj/skupper-example-console/actions/workflows/main.yaml/badge.svg)](https://github.com/ssorj/skupper-example-console/actions/workflows/main.yaml)
 
-#### A minimal HTTP application deployed across Kubernetes clusters using Skupper
+#### Explore an application network using the Skupper web console
 
 This example is part of a [suite of examples][examples] showing the
 different ways you can use [Skupper][website] to connect services
@@ -17,11 +17,11 @@ across cloud providers, data centers, and edge sites.
 * [Prerequisites](#prerequisites)
 * [Step 1: Install the Skupper command-line tool](#step-1-install-the-skupper-command-line-tool)
 * [Step 2: Set up your namespaces](#step-2-set-up-your-namespaces)
-* [Step 3: Deploy the frontent and backend](#step-3-deploy-the-frontent-and-backend)
+* [Step 3: Deploy the frontend and backend](#step-3-deploy-the-frontend-and-backend)
 * [Step 4: Create your sites](#step-4-create-your-sites)
 * [Step 5: Link your sites](#step-5-link-your-sites)
 * [Step 6: Expose the backend](#step-6-expose-the-backend)
-* [Step 7: Access the frontend](#step-7-access-the-frontend)
+* [Step 7: Access the web console](#step-7-access-the-web-console)
 * [Cleaning up](#cleaning-up)
 * [Summary](#summary)
 * [Next steps](#next-steps)
@@ -29,10 +29,11 @@ across cloud providers, data centers, and edge sites.
 
 ## Overview
 
-This example is a very simple multi-service HTTP application
-deployed across Kubernetes clusters using Skupper.
+The Skupper web console provides a graphical view of a Skupper
+network.  This example shows you how to set it up.  It uses the
+Skupper Hello World as an example application.
 
-It contains two services:
+The Hello World application contains two components:
 
 * A backend service that exposes an `/api/hello` endpoint.  It
   returns greetings of the form `Hi, <your-name>.  I am <my-name>
@@ -41,11 +42,9 @@ It contains two services:
 * A frontend service that sends greetings to the backend and
   fetches new greetings in response.
 
-With Skupper, you can place the backend in one cluster and the
-frontend in another and maintain connectivity between the two
-services without exposing the backend to the public internet.
-
-<img src="images/entities.svg" width="640"/>
+These two components run on two distinct Kubernetes clusters (two
+_sites_).  With the Skupper console, you can observe the two sites
+and the two components and see the metrics for their communication.
 
 ## Prerequisites
 
@@ -130,7 +129,7 @@ kubectl create namespace east
 kubectl config set-context --current --namespace east
 ~~~
 
-## Step 3: Deploy the frontent and backend
+## Step 3: Deploy the frontend and backend
 
 This example runs the frontend and the backend in separate
 Kubernetes namespaces, on different clusters.
@@ -158,9 +157,15 @@ application are running.  Sites are linked together to form a
 network for your application.  In Kubernetes, a site is associated
 with a namespace.
 
-For each namespace, use `skupper init` to create a site.  This
-deploys the Skupper router and controller.  Then use `skupper
-status` to see the outcome.
+In West, use `skupper init` with the `--enable-console` and
+`--enable-flow-collector` options.  These options make the
+console available from West.
+
+In East, use `skupper init` again, this time without the extra
+options.
+
+After each `skupper init` operation, run `skupper status` to see
+the outcome.
 
 **Note:** If you are using Minikube, you need to [start minikube
 tunnel][minikube-tunnel] before you run `skupper init`.
@@ -170,14 +175,14 @@ tunnel][minikube-tunnel] before you run `skupper init`.
 _**West:**_
 
 ~~~ shell
-skupper init
+skupper init --enable-console --enable-flow-collector
 skupper status
 ~~~
 
 _Sample output:_
 
 ~~~ console
-$ skupper init
+$ skupper init --enable-console --enable-flow-collector
 Waiting for LoadBalancer IP or hostname...
 Waiting for status...
 Skupper is now installed in namespace 'west'.  Use 'skupper status' to get more information.
@@ -282,48 +287,38 @@ $ skupper expose deployment/backend --port 8080
 deployment backend exposed as backend
 ~~~
 
-## Step 7: Access the frontend
+## Step 7: Access the web console
 
-In order to use and test the application, we need external access
-to the frontend.
+Now we're ready to try the console.  To access it, use `skupper
+status` to look up the URL of the console.  Then use `kubectl
+get secret/skupper-console-users` to look up the console admin
+password.
 
-Use `kubectl expose` with `--type LoadBalancer` to open network
-access to the frontend service.
-
-Once the frontend is exposed, use `kubectl get service/frontend`
-to look up the external IP of the frontend service.  If the
-external IP is `<pending>`, try again after a moment.
-
-Once you have the external IP, use `curl` or a similar tool to
-request the `/api/health` endpoint at that address.
-
-**Note:** The `<external-ip>` field in the following commands is a
-placeholder.  The actual value is an IP address.
+**Note:** The `<console-url>` and `<password>` fields in the
+following output are placeholders.  The actual values are specific
+to your environment.
 
 _**West:**_
 
 ~~~ shell
-kubectl expose deployment/frontend --port 8080 --type LoadBalancer
-kubectl get service/frontend
-curl http://<external-ip>:8080/api/health
+skupper status
+kubectl get secret/skupper-console-users -o jsonpath={.data.admin} | base64 -d
 ~~~
 
 _Sample output:_
 
 ~~~ console
-$ kubectl expose deployment/frontend --port 8080 --type LoadBalancer
-service/frontend exposed
+$ skupper status
+Skupper is enabled for namespace "west" in interior mode. It is connected to 1 other site. It has 1 exposed service.
+The site console url is: <console-url>
+The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
 
-$ kubectl get service/frontend
-NAME       TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)          AGE
-frontend   LoadBalancer   10.103.232.28   <external-ip>   8080:30407/TCP   15s
-
-$ curl http://<external-ip>:8080/api/health
-OK
+$ kubectl get secret/skupper-console-users -o jsonpath={.data.admin} | base64 -d
+<password>
 ~~~
 
-If everything is in order, you can now access the web interface by
-navigating to `http://<external-ip>:8080/` in your browser.
+Navigate to `<console-url>` in your browser.  When prompted, log
+in as user `admin` and enter the password.
 
 ## Cleaning up
 
@@ -344,26 +339,6 @@ _**East:**_
 skupper delete
 kubectl delete deployment/backend
 ~~~
-
-## Summary
-
-This example locates the frontend and backend services in different
-namespaces, on different clusters.  Ordinarily, this means that they
-have no way to communicate unless they are exposed to the public
-internet.
-
-Introducing Skupper into each namespace allows us to create a virtual
-application network that can connect services in different clusters.
-Any service exposed on the application network is represented as a
-local service in all of the linked namespaces.
-
-The backend service is located in `east`, but the frontend service
-in `west` can "see" it as if it were local.  When the frontend
-sends a request to the backend, Skupper forwards the request to the
-namespace where the backend is running and routes the response back to
-the frontend.
-
-<img src="images/sequence.svg" width="640"/>
 
 ## Next steps
 
